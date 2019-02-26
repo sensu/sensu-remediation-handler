@@ -95,7 +95,7 @@ be set in the `sensu-backend` environment:
 1. Create a dedicated Sensu user & role for the remediation handler
 
    ```
-   $ sensuctl role create remediation-handler --namespace=default --verbs=create,update --resources checks
+   $ sensuctl role create remediation-handler --namespace=default --verb=create,update --resource checks
    $ sensuctl role-binding create remediation-handler --role=remediation-handler --user=remediation-handler
    $ sensuctl user create remediation-handler --password REPLACEME
    ```
@@ -111,7 +111,7 @@ be set in the `sensu-backend` environment:
      namespace: default
    spec:
      url: https://github.com/calebhailey/sensu-go-remediation-handler/...
-     sha512: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+     sha512: xxxxxxxxxx
    ```
 
    Save this definition to a file named `sensu-go-remediation-handler-asset.yaml`
