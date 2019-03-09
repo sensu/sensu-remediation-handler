@@ -1,0 +1,114 @@
+---
+type: Asset
+api_version: core/v2
+metadata:
+  name: sensu-go-remediation-handler
+  namespace: default
+spec:
+  url: http://c37f50abcf82/assets/sensu-go-remediation-handler-v0.1-linux-x86_64.tar.gz
+  sha512: 7aa42baf7f9ae28d0dd835692954f2cb40998ffcdc4e82d6ed476555029b084670a020d24c37d504f116f8fd35f004b20dfd95c47fd3387db2a8454c4fe52fdb
+
+---
+type: Role
+api_version: core/v2
+metadata:
+  name: remediation-handler
+  namespace: default
+spec:
+  rules:
+  - resources:
+    - checks
+    verbs:
+    - create
+    - update
+
+---
+type: RoleBinding
+api_version: core/v2
+metadata:
+  name: remediation-handler
+  namespace: default
+spec:
+  role_ref:
+    type: Role
+    name: remediation-handler
+  subjects:
+  - type: User
+    name: remediation-handler
+
+---
+type: Handler
+api_version: core/v2
+metadata:
+  name: remediation
+  namespace: default
+spec:
+  type: pipe
+  command: sensu-go-remediation-handler
+  timeout: 10
+  runtime_assets:
+  - sensu-go-remediation-handler
+  env_vars:
+  - "SENSU_BACKEND_HOST=127.0.0.1"
+  - "SENSU_BACKEND_PORT=8080"
+  - "SENSU_USER=remediation-handler"
+  - "SENSU_PASS=password"
+
+---
+type: CheckConfig
+api_version: core/v2
+metadata:
+  name: remediation-1
+  namespace: default
+  annotations:
+    description: "Level 1 remediation."
+spec:
+  command: echo "remediate yo-self!"
+  publish: false
+  interval: 10 # this shouldn't be required; see: https://github.com/sensu/sensu-go/issues/2623
+
+---
+type: CheckConfig
+api_version: core/v2
+metadata:
+  name: remediation-2
+  namespace: default
+  annotations:
+    description: "Level 2 remediation."
+spec:
+  command: echo "Second tier remediation!"
+  publish: false
+  interval: 10 # this shouldn't be required; see: https://github.com/sensu/sensu-go/issues/2623
+
+---
+type: CheckConfig
+api_version: core/v2
+metadata:
+  name: helloworld
+  namespace: default
+  labels:
+    foo: bar
+  annotations:
+    sensu.io/plugins/remediation/config/actions: |
+      [
+        {
+          "description": "Perform this action after the check has been failing for 30 seconds.",
+          "request": "remediation-1",
+          "occurrences": [ 3 ],
+          "severities": [ 1,2 ]
+        },
+        {
+          "description": "Perform this action after the check has been failing for 120 seconds.",
+          "request": "remediation-2",
+          "occurrences": [ 12 ],
+          "severities": [ 1,2 ]
+        }
+      ]
+spec:
+  command: echo "Hello {{ .system.os }} world!" && exit 1
+  publish: true
+  interval: 10
+  handlers:
+  - remediation
+  subscriptions:
+  - nginx
