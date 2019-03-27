@@ -1,0 +1,31 @@
+builds:
+- env:
+  - CGO_ENABLED=0
+  main: main.go
+  goos:
+  - darwin
+  - freebsd
+  - linux
+  - netbsd
+  - solaris
+  goarch:
+  - amd64
+  - 386
+  - arm
+  - arm64
+  goarm:
+  - 5
+  - 6
+  - 7
+  ignore:
+  - goos: freebsd
+    goarch: arm
+  - goos: windows
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_sha256-checksums.txt"
+
+archive:
+  format: tar.gz
+  files:
+  - README.md
