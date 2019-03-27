@@ -2,6 +2,7 @@ builds:
 - env:
   - CGO_ENABLED=0
   main: main.go
+  binary: bin/{{ .ProjectName }}
   goos:
   - darwin
   - freebsd
