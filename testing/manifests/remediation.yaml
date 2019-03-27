@@ -52,7 +52,7 @@ spec:
   - "SENSU_BACKEND_HOST=127.0.0.1"
   - "SENSU_BACKEND_PORT=8080"
   - "SENSU_USER=remediation-handler"
-  - "SENSU_PASS=password"
+  - "SENSU_PASS=supersecret"
 
 ---
 type: CheckConfig

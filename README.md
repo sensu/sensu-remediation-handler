@@ -140,7 +140,7 @@ be set in the `sensu-backend` environment:
      - "SENSU_BACKEND_HOST=127.0.0.1"
      - "SENSU_BACKEND_PORT=8080"
      - "SENSU_USER=remediation-handler"
-     - "SENSU_PASS=REPLACEME"
+     - "SENSU_PASS=supersecret"
    ```
 
    Save this definition to a file named `sensu-go-remediation-handler.yaml` and
