@@ -5,8 +5,8 @@ metadata:
   name: sensu-go-remediation-handler
   namespace: default
 spec:
-  url: http://c37f50abcf82/assets/sensu-go-remediation-handler-v0.1-linux-x86_64.tar.gz
-  sha512: 7aa42baf7f9ae28d0dd835692954f2cb40998ffcdc4e82d6ed476555029b084670a020d24c37d504f116f8fd35f004b20dfd95c47fd3387db2a8454c4fe52fdb
+  url: https://github.com/calebhailey/sensu-go-remediation-handler/releases/download/0.3/sensu-go-remediation-handler_0.3_linux_amd64.tar.gz
+  sha512: 4a1d0aa07ae18eac95dbbe384080ee34d9206afb7f528b29740da8d0e345ebbaf85dd8ce5fcefdaf13115f8d5e1176bacb7bdeb92b61cacac42d6d763a31a13a
 
 ---
 type: Role
