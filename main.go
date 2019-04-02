@@ -134,7 +134,6 @@ func main() {
             ),
             body,
           )
-          log.Printf("Remediation request URL: %s\n",req.URL)
           if err != nil {
             log.Fatal(err)
           }
