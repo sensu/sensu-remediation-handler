@@ -62,21 +62,21 @@ func authenticate() string {
     nil,
   )
   if err != nil {
-  	log.Fatal(err)
+    log.Fatal("ERROR: ", err)
   }
   req.SetBasicAuth(sensuApiUser, sensuApiPass)
   resp, err := http.DefaultClient.Do(req)
   if err != nil {
-  	log.Fatal(err)
+    log.Fatal("ERROR: ", err)
   }
   defer resp.Body.Close()
   b,err := ioutil.ReadAll(resp.Body)
   if err != nil {
-    log.Fatal(err)
+    log.Fatal("ERROR: ", err)
   }
   err = json.NewDecoder(bytes.NewReader(b)).Decode(&authentication)
   if err != nil {
-    log.Fatal(err)
+    log.Fatal("ERROR: ", err)
   }
   return authentication.AccessToken
 }
@@ -91,13 +91,13 @@ func main() {
   stdin = os.Stdin
   err := json.NewDecoder(stdin).Decode(&event)
   if err != nil {
-    log.Fatal(err)
+    log.Fatal("ERROR: ", err)
   }
 
   if event.Check.Annotations[annotationConfigKey] != "" {
     err = json.Unmarshal([]byte(event.Check.Annotations[annotationConfigKey]), &actions)
     if err != nil {
-      log.Fatal(err)
+      log.Fatal("ERROR: ", err)
     }
     for _,action := range( actions ) {
       // Only perform the action if the event severity matches
@@ -121,7 +121,7 @@ func main() {
           }
           postBody, err := json.Marshal(data)
           if err != nil {
-            log.Fatal(err)
+            log.Fatal("ERROR: ", err)
           }
           body := bytes.NewReader(postBody)
           req, err := http.NewRequest(
@@ -135,14 +135,14 @@ func main() {
             body,
           )
           if err != nil {
-            log.Fatal(err)
+            log.Fatal("ERROR: ", err)
           }
           sensuApiToken = authenticate()
           req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sensuApiToken))
           req.Header.Set("Content-Type", "application/json")
           resp, err := http.DefaultClient.Do(req)
           if err != nil {
-            log.Fatal(err)
+            log.Fatal("ERROR: ", err)
           }
           defer resp.Body.Close()
           b,err := ioutil.ReadAll(resp.Body)
