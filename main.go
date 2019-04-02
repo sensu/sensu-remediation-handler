@@ -126,9 +126,15 @@ func main() {
           body := bytes.NewReader(postBody)
           req, err := http.NewRequest(
             "POST",
-            fmt.Sprintf("http://%s:%s/api/core/v2/namespaces/default/checks/%s/execute",sensuApiHost,sensuApiPort,action.Request),
+            fmt.Sprintf("http://%s:%s/api/core/v2/namespaces/%s/checks/%s/execute",
+                        sensuApiHost,
+                        sensuApiPort,
+                        event.Entity.Namespace,
+                        action.Request,
+            ),
             body,
           )
+          log.Printf("Remediation request URL: %s\n",req.URL)
           if err != nil {
             log.Fatal(err)
           }
