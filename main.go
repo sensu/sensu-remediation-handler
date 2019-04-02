@@ -12,6 +12,23 @@ import (
   "github.com/sensu/sensu-go/types"
 )
 
+type Authentication struct {
+  AccessToken string `json:"access_token"`
+  RefreshToken string `json:"refresh_token"`
+  Expiration int64 `json:"expires_at"`
+}
+
+type RemediationConfig struct {
+  Request string `json:"request"`
+  Occurrences []int `json:"occurrences"`
+  Severities []int `json:"severities"`
+  Subscriptions []string `json:subscriptions`
+}
+type RequestPayload struct {
+  Check string `json:"check"`
+  Subscriptions []string `json:"subscriptions"`
+}
+
 var (
   sensuApiHost string = getenv("SENSU_BACKEND_HOST","127.0.0.1")
   sensuApiPort string = getenv("SENSU_BACKEND_PORT","8080")
@@ -38,11 +55,6 @@ func contains(s []int, i int) bool {
 }
 
 func authenticate() string {
-  type Authentication struct {
-    AccessToken string `json:"access_token"`
-    RefreshToken string `json:"refresh_token"`
-    Expiration int64 `json:"expires_at"`
-  }
   var authentication Authentication
   req, err := http.NewRequest(
     "GET",
@@ -71,17 +83,6 @@ func authenticate() string {
 
 
 func main() {
-  type RemediationConfig struct {
-    Request string `json:"request"`
-    Occurrences []int `json:"occurrences"`
-    Severities []int `json:"severities"`
-    Subscriptions []string `json:subscriptions`
-  }
-  type RequestPayload struct {
-  	Check string `json:"check"`
-    Subscriptions []string `json:"subscriptions"`
-  }
-
   var stdin *os.File
   var event types.Event
   var actions []RemediationConfig
