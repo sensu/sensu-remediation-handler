@@ -66,7 +66,9 @@ func authenticate() string {
 	}
 	req.SetBasicAuth(sensuApiUser, sensuApiPass)
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
+	if resp.StatusCode == 401 {
+		log.Fatalf("ERROR: %v %s (please check your access credentials)", resp.StatusCode, http.StatusText(resp.StatusCode))
+	} else if err != nil {
 		log.Fatal("ERROR: ", err)
 	}
 	defer resp.Body.Close()
@@ -140,11 +142,14 @@ func main() {
 					req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sensuApiToken))
 					req.Header.Set("Content-Type", "application/json")
 					resp, err := http.DefaultClient.Do(req)
-					if err != nil {
-						log.Fatal("ERROR: ", err)
+					if resp.StatusCode == 404 {
+						log.Fatalf("ERROR: %v %s (%s); no check named \"%s\" found in namespace \"%s\".\n", resp.StatusCode, http.StatusText(resp.StatusCode), req.URL, action.Request, event.Entity.Namespace)
+					} else if err != nil {
+						log.Fatalf("ERROR: %s\n", err)
 					}
 					defer resp.Body.Close()
 					b, err := ioutil.ReadAll(resp.Body)
+					fmt.Println(resp.StatusCode)
 					fmt.Println(string(b))
 				}
 			}
