@@ -25,6 +25,7 @@ builds:
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_sha256-checksums.txt"
+  algorithm: sha512
 
 archive:
   format: tar.gz
