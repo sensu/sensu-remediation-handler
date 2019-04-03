@@ -24,7 +24,7 @@ builds:
   - goos: windows
 
 checksum:
-  name_template: "{{ .ProjectName }}_{{ .Version }}_sha256-checksums.txt"
+  name_template: "{{ .ProjectName }}_{{ .Version }}_sha512-checksums.txt"
   algorithm: sha512
 
 archive:
