@@ -1,6 +1,8 @@
 builds:
 - env:
   - CGO_ENABLED=0
+  ldflags:
+  - -s -w -extldflags "-static"
   main: main.go
   binary: bin/{{ .ProjectName }}
   goos:
