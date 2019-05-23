@@ -30,11 +30,12 @@ type RequestPayload struct {
 }
 
 var (
-	sensuApiHost  string = getenv("SENSU_BACKEND_HOST", "127.0.0.1")
-	sensuApiPort  string = getenv("SENSU_BACKEND_PORT", "8080")
-	sensuApiUser  string = getenv("SENSU_USER", "admin")
-	sensuApiPass  string = getenv("SENSU_PASS", "P@ssw0rd!")
-	sensuApiToken string
+	sensuApiProtocol string = getenv("SENSU_BACKEND_PROTOCOL", "http")
+	sensuApiHost     string = getenv("SENSU_BACKEND_HOST", "127.0.0.1")
+	sensuApiPort     string = getenv("SENSU_BACKEND_PORT", "8080")
+	sensuApiUser     string = getenv("SENSU_USER", "admin")
+	sensuApiPass     string = getenv("SENSU_PASS", "P@ssw0rd!")
+	sensuApiToken    string
 )
 
 func getenv(key string, fallback string) string {
@@ -58,7 +59,7 @@ func authenticate() string {
 	var authentication Authentication
 	req, err := http.NewRequest(
 		"GET",
-		fmt.Sprintf("http://%s:%s/auth", sensuApiHost, sensuApiPort),
+		fmt.Sprintf("%s://%s:%s/auth", sensuApiProtocol, sensuApiHost, sensuApiPort),
 		nil,
 	)
 	if err != nil {
