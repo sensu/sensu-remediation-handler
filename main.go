@@ -73,7 +73,7 @@ func authenticate(httpClient *http.Client) string {
 	} else if resp.StatusCode == 401 {
 		log.Fatalf("ERROR: %v %s (please check your access credentials)", resp.StatusCode, http.StatusText(resp.StatusCode))
 	} else if resp.StatusCode >= 300 {
-		log.Fatalf("ERROR: %v %s", resp.StatusCode, resp.StatusText(resp.StatusCode))
+		log.Fatalf("ERROR: %v %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 	defer resp.Body.Close()
 	b, err := ioutil.ReadAll(resp.Body)
@@ -187,7 +187,7 @@ func main() {
 					} else if resp.StatusCode == 404 {
 						log.Fatalf("ERROR: %v %s (%s); no check named \"%s\" found in namespace \"%s\".\n", resp.StatusCode, http.StatusText(resp.StatusCode), req.URL, action.Request, event.Entity.Namespace)
 					} else if resp.StatusCode >= 300 {
-						log.Fatalf("ERROR: %v %s", resp.StatusCode, resp.StatusText(resp.StatusCode))
+						log.Fatalf("ERROR: %v %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 					}
 					defer resp.Body.Close()
 					b, err := ioutil.ReadAll(resp.Body)
