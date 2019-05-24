@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -30,11 +32,11 @@ type RequestPayload struct {
 }
 
 var (
-	sensuApiHost  string = getenv("SENSU_BACKEND_HOST", "127.0.0.1")
-	sensuApiPort  string = getenv("SENSU_BACKEND_PORT", "8080")
-	sensuApiUser  string = getenv("SENSU_USER", "admin")
-	sensuApiPass  string = getenv("SENSU_PASS", "P@ssw0rd!")
-	sensuApiToken string
+	sensuApiUrl      string = getenv("SENSU_API_URL", "http://127.0.0.1:8080")
+	sensuApiCertFile string = getenv("SENSU_API_CERT_FILE", "")
+	sensuApiUser     string = getenv("SENSU_API_USER", "admin")
+	sensuApiPass     string = getenv("SENSU_API_PASS", "P@ssw0rd!")
+	sensuApiToken    string
 )
 
 func getenv(key string, fallback string) string {
@@ -54,22 +56,24 @@ func contains(s []int, i int) bool {
 	return false
 }
 
-func authenticate() string {
+func authenticate(httpClient *http.Client) string {
 	var authentication Authentication
 	req, err := http.NewRequest(
 		"GET",
-		fmt.Sprintf("http://%s:%s/auth", sensuApiHost, sensuApiPort),
+		fmt.Sprintf("%s/auth", sensuApiUrl),
 		nil,
 	)
 	if err != nil {
 		log.Fatal("ERROR: ", err)
 	}
 	req.SetBasicAuth(sensuApiUser, sensuApiPass)
-	resp, err := http.DefaultClient.Do(req)
-	if resp.StatusCode == 401 {
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.Fatalf("ERROR: %s", err)
+	} else if resp.StatusCode == 401 {
 		log.Fatalf("ERROR: %v %s (please check your access credentials)", resp.StatusCode, http.StatusText(resp.StatusCode))
-	} else if err != nil {
-		log.Fatal("ERROR: ", err)
+	} else if resp.StatusCode >= 300 {
+		log.Fatalf("ERROR: %v %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 	defer resp.Body.Close()
 	b, err := ioutil.ReadAll(resp.Body)
@@ -83,11 +87,48 @@ func authenticate() string {
 	return authentication.AccessToken
 }
 
+func LoadCACerts(path string) (*x509.CertPool, error) {
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("Error loading system cert pool: %s", err)
+	}
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+	if path != "" {
+		certs, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("Error reading CA file (%s): %s", path, err)
+		} else {
+			rootCAs.AppendCertsFromPEM(certs)
+		}
+	}
+	return rootCAs, nil
+}
+
+func initHttpClient() *http.Client {
+	certs, err := LoadCACerts(sensuApiCertFile)
+	if err != nil {
+		log.Fatalf("ERROR: %s\n", err)
+	}
+	tlsConfig := &tls.Config{
+		RootCAs: certs,
+	}
+	tr := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+	client := &http.Client{
+		Transport: tr,
+	}
+	return client
+}
+
 func main() {
 	var stdin *os.File
 	var event types.Event
 	var actions []RemediationConfig
 	var annotationConfigKey string = "sensu.io/plugins/remediation/config/actions"
+	var httpClient *http.Client = initHttpClient()
 
 	stdin = os.Stdin
 	err := json.NewDecoder(stdin).Decode(&event)
@@ -127,9 +168,8 @@ func main() {
 					body := bytes.NewReader(postBody)
 					req, err := http.NewRequest(
 						"POST",
-						fmt.Sprintf("http://%s:%s/api/core/v2/namespaces/%s/checks/%s/execute",
-							sensuApiHost,
-							sensuApiPort,
+						fmt.Sprintf("%s/api/core/v2/namespaces/%s/checks/%s/execute",
+							sensuApiUrl,
 							event.Entity.Namespace,
 							action.Request,
 						),
@@ -138,14 +178,16 @@ func main() {
 					if err != nil {
 						log.Fatal("ERROR: ", err)
 					}
-					sensuApiToken = authenticate()
+					sensuApiToken = authenticate(httpClient)
 					req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sensuApiToken))
 					req.Header.Set("Content-Type", "application/json")
-					resp, err := http.DefaultClient.Do(req)
-					if resp.StatusCode == 404 {
-						log.Fatalf("ERROR: %v %s (%s); no check named \"%s\" found in namespace \"%s\".\n", resp.StatusCode, http.StatusText(resp.StatusCode), req.URL, action.Request, event.Entity.Namespace)
-					} else if err != nil {
+					resp, err := httpClient.Do(req)
+					if err != nil {
 						log.Fatalf("ERROR: %s\n", err)
+					} else if resp.StatusCode == 404 {
+						log.Fatalf("ERROR: %v %s (%s); no check named \"%s\" found in namespace \"%s\".\n", resp.StatusCode, http.StatusText(resp.StatusCode), req.URL, action.Request, event.Entity.Namespace)
+					} else if resp.StatusCode >= 300 {
+						log.Fatalf("ERROR: %v %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 					}
 					defer resp.Body.Close()
 					b, err := ioutil.ReadAll(resp.Body)
