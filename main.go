@@ -32,7 +32,7 @@ type RequestPayload struct {
 }
 
 var (
-	sensuApiUrl      string = getenv("SENSU_API_URL", "https://127.0.0.1:8080")
+	sensuApiUrl      string = getenv("SENSU_API_URL", "http://127.0.0.1:8080")
 	sensuApiCertFile string = getenv("SENSU_API_CERT_FILE", "")
 	sensuApiUser     string = getenv("SENSU_API_USER", "admin")
 	sensuApiPass     string = getenv("SENSU_API_PASS", "P@ssw0rd!")
@@ -68,10 +68,12 @@ func authenticate(httpClient *http.Client) string {
 	}
 	req.SetBasicAuth(sensuApiUser, sensuApiPass)
 	resp, err := httpClient.Do(req)
-	if resp.StatusCode == 401 {
+	if err != nil {
+		log.Fatalf("ERROR: %s", err)
+	} else if resp.StatusCode == 401 {
 		log.Fatalf("ERROR: %v %s (please check your access credentials)", resp.StatusCode, http.StatusText(resp.StatusCode))
-	} else if err != nil {
-		log.Fatal("ERROR: ", err)
+	} else if resp.StatusCode >= 300 {
+		log.Fatalf("ERROR: %v %s", resp.StatusCode, resp.StatusText(resp.StatusCode))
 	}
 	defer resp.Body.Close()
 	b, err := ioutil.ReadAll(resp.Body)
@@ -180,10 +182,12 @@ func main() {
 					req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sensuApiToken))
 					req.Header.Set("Content-Type", "application/json")
 					resp, err := httpClient.Do(req)
-					if resp.StatusCode == 404 {
-						log.Fatalf("ERROR: %v %s (%s); no check named \"%s\" found in namespace \"%s\".\n", resp.StatusCode, http.StatusText(resp.StatusCode), req.URL, action.Request, event.Entity.Namespace)
-					} else if err != nil {
+					if err != nil {
 						log.Fatalf("ERROR: %s\n", err)
+					} else if resp.StatusCode == 404 {
+						log.Fatalf("ERROR: %v %s (%s); no check named \"%s\" found in namespace \"%s\".\n", resp.StatusCode, http.StatusText(resp.StatusCode), req.URL, action.Request, event.Entity.Namespace)
+					} else if resp.StatusCode >= 300 {
+						log.Fatalf("ERROR: %v %s", resp.StatusCode, resp.StatusText(resp.StatusCode))
 					}
 					defer resp.Body.Close()
 					b, err := ioutil.ReadAll(resp.Body)
