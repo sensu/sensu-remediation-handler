@@ -137,10 +137,10 @@ be set in the `sensu-backend` environment:
      runtime_assets:
      - sensu-go-remediation-handler
      env_vars:
-     - "SENSU_BACKEND_HOST=127.0.0.1"
-     - "SENSU_BACKEND_PORT=8080"
-     - "SENSU_USER=remediation-handler"
-     - "SENSU_PASS=supersecret"
+     - "SENSU_API_URL=http://127.0.0.1:8080"
+     - "SENSU_API_CERT_FILE="
+     - "SENSU_API_USER=remediation-handler"
+     - "SENSU_API_PASS=supersecret"
    ```
 
    Save this definition to a file named `sensu-go-remediation-handler.yaml` and
