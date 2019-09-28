@@ -198,7 +198,7 @@ func main() {
 		}
 	} else {
 		// No configured actions
-		log.Printf("No remediation actions configured; nothing to do.")
-		log.Printf("To enable remediation actions, configure the \"%s\" check annotation.", annotationConfigKey)
+		log.Printf("No remediation actions configured for check \"%s\"; nothing to do.", event.Check.Name)
+		log.Printf("To enable remediation actions, provide remediation configuration using the \"%s\" check annotation.", annotationConfigKey)
 	}
 }
