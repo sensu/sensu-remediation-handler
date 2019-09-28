@@ -127,7 +127,7 @@ func main() {
 	var stdin *os.File
 	var event types.Event
 	var actions []RemediationConfig
-	var annotationConfigKey string = "sensu.io/plugins/remediation/config/actions"
+	var annotationConfigKey string = "io.sensu.remediation.config.actions"
 	var httpClient *http.Client = initHttpClient()
 
 	stdin = os.Stdin

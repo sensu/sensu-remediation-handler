@@ -89,7 +89,7 @@ metadata:
   labels:
     foo: bar
   annotations:
-    sensu.io/plugins/remediation/config/actions: |
+    io.sensu.remediation.config.actions: |
       [
         {
           "description": "Perform this action after the check has been failing for 30 seconds.",

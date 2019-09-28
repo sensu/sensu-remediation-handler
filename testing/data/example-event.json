@@ -182,7 +182,7 @@
         "foo": "bar"
       },
       "annotations": {
-        "sensu.io/plugins/remediation/config/actions": "[\n  {\n    \"request\": \"remediation-1\",\n    \"occurrences\": [ 3 ],\n    \"severities\": [ 1, 2 ]\n  }\n]\n"
+        "io.sensu.remediation.config.actions": "[\n  {\n    \"request\": \"remediation-1\",\n    \"occurrences\": [ 3 ],\n    \"severities\": [ 1, 2 ]\n  }\n]\n"
       }
     }
   },
