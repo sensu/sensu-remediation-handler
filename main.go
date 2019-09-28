@@ -191,6 +191,10 @@ func main() {
 					}
 					defer resp.Body.Close()
 					b, err := ioutil.ReadAll(resp.Body)
+					if err != nil {
+						log.Printf("Error reading response body")
+						log.Fatalf("ERROR: %s\n", err)
+					}
 					fmt.Println(resp.StatusCode)
 					fmt.Println(string(b))
 				}
