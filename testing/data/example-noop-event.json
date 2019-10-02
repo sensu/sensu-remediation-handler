@@ -180,9 +180,6 @@
       "namespace": "default",
       "labels": {
         "foo": "bar"
-      },
-      "annotations": {
-        "io.sensu.remediation.config.actions": "[\n  {\n    \"request\": \"remediation-1\",\n    \"occurrences\": [ 3 ],\n    \"severities\": [ 1, 2 ]\n  }\n]\n"
       }
     }
   },

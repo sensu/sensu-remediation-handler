@@ -53,7 +53,7 @@ metadata:
   labels:
     foo: bar
   annotations:
-    sensu.io/plugins/remediation/config/actions: |
+    io.sensu.remediation.config.actions: |
       [
         {
           "description": "Perform this action once after Nginx has been down for 30 seconds.",
