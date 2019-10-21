@@ -100,7 +100,7 @@ example       | `"occurrences": [4,14,42]`
 
 severities    | |
 --------------|-------------------------------
-description   | A list of check status severities which are allowed for the remediation action
+description   | A list of [check status severities][check-result-specification] which are allowed for the remediation action.
 required      | true
 type          | Array of integers
 example       | `"severities": [1]`
@@ -217,4 +217,5 @@ spec:
 This handler implements a pattern first implemented in [Nick Stielau's "Sensu Remediator"][remediator] (circa 2012). Thanks Nick!
 
 [handler]: https://docs.sensu.io/sensu-go/latest/reference/handlers/
+[check-result-specification]: https://docs.sensu.io/sensu-go/latest/reference/checks/#check-result-specification
 [remediator]: https://github.com/sensu-plugins/sensu-plugins-sensu/blob/master/bin/handler-sensu.rb
