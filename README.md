@@ -88,10 +88,24 @@ example       | `"request": "remediate-ntpd-service"`
 
 occurrences   | |
 --------------|-------------------------------
-description   | The number of event occurrences at which the remediation action is triggered.
+description   | A list of occurrence counts at which the remediation action is triggered.
 required      | true
-type          | Integer
-example       | `"occurrences": 42`
+type          | Array of integers
+example       | `"occurrences": [4,14,42]`
+
+severities    | |
+--------------|-------------------------------
+description   | A list of check status severities which are allowed for the remediation action
+required      | true
+type          | Array of integers
+example       | `"severities": [1]`
+
+subscriptions | |
+--------------|-------------------------------
+description   | A list of agent subscriptions for targeting remediation actions.
+required      | true
+type          | Array of strings
+example       | `"subscriptions": ["ntpd"]`
 
 ### Setup
 
