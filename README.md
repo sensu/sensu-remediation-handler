@@ -4,9 +4,14 @@
 
 - [Overview](#overview)
 - [Configuration](#configuration)
-  - [Asset Manifest](#asset-manifest)
-  - [Handler Manifest(s)](#handler-manifests)
+  - [Environment Variables](#environment-variables)
+  - [Annotations](#annotations)
+    - [Annotation specification](#annotation-specification)
+    - [Remediation action specification](#remediation-action-specification)
+- [Setup](#setup)
 - [Usage Example](#usage-example)
+  - [Example "Unscheduled" Check (Remediation Action)](#example--unscheduled--check--remediation-action-)
+  - [Example Check Definition and Remediation Request Configuration](#example-check-definition-and-remediation-request-configuration)
 - [Acknowledgements](#acknowledgements)
 
 ## Overview
@@ -107,7 +112,7 @@ required      | true
 type          | Array of strings
 example       | `"subscriptions": ["ntpd"]`
 
-### Setup
+## Setup
 
 1. Create a dedicated Sensu user & role for the remediation handler
 
