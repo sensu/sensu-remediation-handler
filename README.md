@@ -1,4 +1,4 @@
-# Sensu Go Remediation Handler
+# Sensu Remediation Handler
 
 [![Bonsai Asset Badge](https://img.shields.io/badge/Bonsai-Download%20Me-brightgreen.svg?colorB=89C967&logo=sensu)](https://bonsai.sensu.io/assets/sensu/sensu-remediation-handler) [![Build Status](https://travis-ci.com/sensu/sensu-remediation-handler.svg?branch=master)](https://travis-ci.com/sensu/sensu-remediation-handler)
 
@@ -14,7 +14,7 @@
 The Sensu Remediation Handler is a [Sensu Go event handler][handler]
 which enables you to build self-healing workflows in Sensu. 
 
-The Sensu Go Remediation Handler &ndash; and other similar "self healing"
+The Sensu Remediation Handler &ndash; and other similar "self healing"
 workflows in Sensu &ndash; combine a few Sensu features:
 
 - An "unscheduled check" configuration (i.e. a Sensu Check with the `"publish":
@@ -134,10 +134,10 @@ example       | `"subscriptions": ["ntpd"]`
      namespace: default
    spec:
      type: pipe
-     command: sensu-go-remediation-handler
+     command: sensu-remediation-handler
      timeout: 10
      runtime_assets:
-     - sensu-go-remediation-handler
+     - sensu-remediation-handler
      env_vars:
      - "SENSU_API_URL=http://127.0.0.1:8080"
      - "SENSU_API_CERT_FILE="
@@ -145,11 +145,11 @@ example       | `"subscriptions": ["ntpd"]`
      - "SENSU_API_PASS=supersecret"
    ```
 
-   Save this definition to a file named `sensu-go-remediation-handler.yaml` and
+   Save this definition to a file named `sensu-remediation-handler.yaml` and
    run:
 
    ```shell
-   sensuctl create -f sensu-go-remediation-handler.yaml
+   sensuctl create -f sensu-remediation-handler.yaml
    ```
 
 ## Usage Example
