@@ -7,10 +7,7 @@ builds:
   binary: bin/{{ .ProjectName }}
   goos:
   - darwin
-  - freebsd
   - linux
-  - netbsd
-  - solaris
   goarch:
   - amd64
   - 386
