@@ -16,7 +16,7 @@
 
 ## Overview
 
-The Sensu Remediation Handler is a [Sensu Go event handler][handler]
+The Sensu Remediation Handler is a [Sensu Go event handler][1]
 that enables you to build self-healing workflows in Sensu. 
 
 The Sensu Remediation Handler &ndash; and other similar self-healing
@@ -100,7 +100,7 @@ example       | `"occurrences": [4,14,42]`
 
 severities    | |
 --------------|-------------------------------
-description   | A list of [check status severities][check-result-specification] that are allowed for the remediation action.
+description   | A list of [check status severities][2] that are allowed for the remediation action.
 required      | true
 type          | Array of integers
 example       | `"severities": [1]`
@@ -214,8 +214,8 @@ spec:
 
 ## Acknowledgements
 
-This handler implements a pattern first implemented in [Nick Stielau's Sensu Remediator][remediator] circa 2012. Thanks, Nick!
+This handler implements a pattern first implemented in [Nick Stielau's Sensu Remediator][3] circa 2012. Thanks, Nick!
 
-[handler]: https://docs.sensu.io/sensu-go/latest/reference/handlers/
-[check-result-specification]: https://docs.sensu.io/sensu-go/latest/reference/checks/#check-result-specification
-[remediator]: https://github.com/sensu-plugins/sensu-plugins-sensu/blob/master/bin/handler-sensu.rb
+[1]: https://docs.sensu.io/sensu-go/latest/reference/handlers/
+[2]: https://docs.sensu.io/sensu-go/latest/reference/checks/#check-result-specification
+[3]: https://github.com/sensu-plugins/sensu-plugins-sensu/blob/master/bin/handler-sensu.rb
