@@ -67,7 +67,7 @@ example              | `SENSU_API_CERT_FILE=/etc/sensu/cacert.pem`
 
 ### Annotations
 
-Although environment variables provide connection details for the Sensu API, you'll use the `io.sensu.remediation.config.actions` check annotation provide the configuration that defines remediation activities.
+Although environment variables provide connection details for the Sensu API, you'll use the `io.sensu.remediation.config.actions` check annotation to provide the configuration that defines remediation activities.
 
 #### Annotation Specification
 
