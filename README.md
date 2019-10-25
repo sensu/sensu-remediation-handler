@@ -6,39 +6,39 @@
 - [Configuration](#configuration)
   - [Environment Variables](#environment-variables)
   - [Annotations](#annotations)
-    - [Annotation specification](#annotation-specification)
-    - [Remediation action specification](#remediation-action-specification)
+    - [Annotation Specification](#annotation-specification)
+    - [Remediation Action Specification](#remediation-action-specification)
 - [Setup](#setup)
-- [Usage Example](#usage-example)
-  - [Example "Unscheduled" Check (Remediation Action)](#example--unscheduled--check--remediation-action-)
+- [Examples](#examples)
+  - [Example "Unscheduled" Check (Remediation Action)](#example-unscheduled-check-remediation-action)
   - [Example Check Definition and Remediation Request Configuration](#example-check-definition-and-remediation-request-configuration)
 - [Acknowledgements](#acknowledgements)
 
 ## Overview
 
 The Sensu Remediation Handler is a [Sensu Go event handler][handler]
-which enables you to build self-healing workflows in Sensu. 
+that enables you to build self-healing workflows in Sensu. 
 
-The Sensu Remediation Handler &ndash; and other similar "self healing"
+The Sensu Remediation Handler &ndash; and other similar self-healing
 workflows in Sensu &ndash; combine a few Sensu features:
 
-- An "unscheduled check" configuration (i.e. a Sensu Check with the `"publish":
+- An "unscheduled check" configuration (i.e. a Sensu check with the `"publish":
   false` attribute set).
-- The Sensu Agent's built-in entity subscriptions (e.g. `entity:web-server-01`)
+- The Sensu agent's built-in entity subscriptions (e.g. `entity:web-server-01`),
   which make it possible to target a single agent with a check execution
   request.
-- The Sensu Checks API `POST /checks/:check/execute` endpoint, which provides
-  the ability to make ad hoc check requests.
+- The Sensu Checks API `POST /checks/:check/execute` endpoint, which allows
+ issuing ad hoc check requests.
 
 ## Configuration
 
 ### Environment Variables
 
-The Sensu Remediation Handler does not honor any command line flags. Instead, environment variables are required, either in the handler definition or in the Sensu backend service environment.
+The Sensu Remediation Handler does not honor any command line flags. Instead, it requires environment variables, either in the handler definition or in the Sensu backend service environment.
 
 SENSU_API_URL        | |
 ---------------------|-------------------------------
-description          | URL for Sensu backend, including scheme, hostname or IP address and port.
+description          | URL for Sensu backend, including scheme, hostname or IP address, and port.
 required             | false
 type                 | String
 default              | http://127.0.0.1:8080
@@ -60,22 +60,22 @@ example              | `SENSU_PASS=setecastronomy`
 
 SENSU_API_CERT_FILE  | |
 ---------------------|-------------------------------
-description          | Filesystem path to a CA certificate used to validate https Sensu API connections.
+description          | Filesystem path to certificate authority (CA) certificate used to validate https Sensu API connections.
 required             | false
 type                 | String
 example              | `SENSU_API_CERT_FILE=/etc/sensu/cacert.pem`
 
 ### Annotations
 
-Whereas environment variables provide connection details for the Sensu API, the `io.sensu.remediation.config.actions` check annotation is used to provide the configuration defining remediation activities.
+Although environment variables provide connection details for the Sensu API, you'll use the `io.sensu.remediation.config.actions` check annotation provide the configuration that defines remediation activities.
 
-#### Annotation specification
+#### Annotation Specification
 
-This handler uses the string value of the `io.sensu.remediation.config.actions` check annotation to determine which remediation actions, if any, should be scheduled for a given event.
+The Sensu Remediation Handler uses the string value of the `io.sensu.remediation.config.actions` check annotation to determine which remediation actions, if any, should be scheduled for a given event.
 
-When present, the value of the `io.sensu.remediation.config.actions` check annotation must be a array of objects containing key/value pairs. Each object element in the array must conform to the Remediation action specification.
+When present, the value of the `io.sensu.remediation.config.actions` check annotation must be a array of objects containing key/value pairs. Each object element in the array must conform to the remediation action specification.
 
-#### Remediation action specification
+#### Remediation Action Specification
 
 description   | |
 --------------|------------------------------------------------------------
@@ -100,7 +100,7 @@ example       | `"occurrences": [4,14,42]`
 
 severities    | |
 --------------|-------------------------------
-description   | A list of [check status severities][check-result-specification] which are allowed for the remediation action.
+description   | A list of [check status severities][check-result-specification] that are allowed for the remediation action.
 required      | true
 type          | Array of integers
 example       | `"severities": [1]`
@@ -114,7 +114,7 @@ example       | `"subscriptions": ["ntpd"]`
 
 ## Setup
 
-1. Create a dedicated Sensu user & role for the remediation handler
+1. Create a dedicated Sensu user and role for the remediation handler.
 
    ```shell
    sensuctl role create remediation-handler --namespace=default --verb=create,update --resource checks
@@ -122,13 +122,13 @@ example       | `"subscriptions": ["ntpd"]`
    sensuctl user create remediation-handler --password REPLACEME
    ```
 
-2. Register the remediation handler asset
+2. Register the remediation handler asset.
 
    ```shell
    sensuctl asset add sensu/sensu-remediation-handler
    ```
 
-3. Configure the handler
+3. Configure the remediation handler.
 
    ```yaml
    ---
@@ -157,7 +157,7 @@ example       | `"subscriptions": ["ntpd"]`
    sensuctl create -f sensu-remediation-handler.yaml
    ```
 
-## Usage Example
+## Examples
 
 ### Example "Unscheduled" Check (Remediation Action)
 
@@ -171,7 +171,7 @@ metadata:
 spec:
   command: sudo systemctl start nginx
   publish: false
-  interval: 10 # interval is not used, but required
+  interval: 10 # interval is required but not used
   subscriptions: []
 ```
 
@@ -214,7 +214,7 @@ spec:
 
 ## Acknowledgements
 
-This handler implements a pattern first implemented in [Nick Stielau's "Sensu Remediator"][remediator] (circa 2012). Thanks Nick!
+This handler implements a pattern first implemented in [Nick Stielau's Sensu Remediator][remediator] circa 2012. Thanks, Nick!
 
 [handler]: https://docs.sensu.io/sensu-go/latest/reference/handlers/
 [check-result-specification]: https://docs.sensu.io/sensu-go/latest/reference/checks/#check-result-specification
