@@ -24,7 +24,7 @@ type RemediationConfig struct {
 	Request       string   `json:"request"`
 	Occurrences   []int    `json:"occurrences"`
 	Severities    []int    `json:"severities"`
-	Subscriptions []string `json:subscriptions`
+	Subscriptions []string `json:"subscriptions"`
 }
 type RequestPayload struct {
 	Check         string   `json:"check"`
