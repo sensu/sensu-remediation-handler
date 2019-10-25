@@ -1,6 +1,6 @@
 # Sensu Remediation Handler
 
-[![Bonsai Asset Badge](https://img.shields.io/badge/Bonsai-Download%20Me-brightgreen.svg?colorB=89C967&logo=sensu)](https://bonsai.sensu.io/assets/sensu/sensu-remediation-handler) [![Build Status](https://travis-ci.com/sensu/sensu-remediation-handler.svg?branch=master)](https://travis-ci.com/sensu/sensu-remediation-handler)
+[![Bonsai Asset Badge](https://img.shields.io/badge/Bonsai-Download%20Me-brightgreen.svg?colorB=89C967&logo=sensu)](https://bonsai.sensu.io/assets/sensu/sensu-remediation-handler) [![Build Status](https://travis-ci.org/sensu/sensu-remediation-handler.svg?branch=master)](https://travis-ci.com/sensu/sensu-remediation-handler)
 
 - [Overview](#overview)
 - [Configuration](#configuration)
