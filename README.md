@@ -28,7 +28,7 @@ workflows in Sensu &ndash; combine a few Sensu features:
   which make it possible to target a single agent with a check execution
   request.
 - The Sensu Checks API `POST /checks/:check/execute` endpoint, which allows
- issuing ad hoc check requests.
+ this handler to issue ad hoc check requests.
 
 ## Configuration
 
