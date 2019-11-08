@@ -125,7 +125,7 @@ example       | `"subscriptions": ["ntpd"]`
 2. Register the remediation handler asset.
 
    ```shell
-   sensuctl asset add sensu/sensu-remediation-handler
+   sensuctl asset add sensu/sensu-remediation-handler --rename sensu-remediation-handler
    ```
 
 3. Configure the remediation handler.
@@ -147,7 +147,7 @@ example       | `"subscriptions": ["ntpd"]`
      - "SENSU_API_URL=http://127.0.0.1:8080"
      - "SENSU_API_CERT_FILE="
      - "SENSU_API_USER=remediation-handler"
-     - "SENSU_API_PASS=supersecret"
+     - "SENSU_API_PASS=REPLACEME"
    ```
 
    Save this definition to a file named `sensu-remediation-handler.yaml` and
@@ -204,7 +204,7 @@ metadata:
       ]
 spec:
   command: check_http -H 127.0.0.1 -P 80 -N
-  publish: false
+  publish: true
   interval: 10
   handlers:
   - remediation
