@@ -175,7 +175,7 @@ spec:
   subscriptions: []
 ```
 
-NOTE: Please note that sensu user needs elevated permissions to run commands which require root privilleges with sudo. 
+**NOTE:** Please note that sensu user needs elevated permissions to run commands with sudo, which require root privilleges. 
 As such, sensu user needs to be added to the sudoers file.
 
 ### Example Check Definition and Remediation Request Configuration
