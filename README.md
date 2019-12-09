@@ -175,7 +175,7 @@ spec:
   subscriptions: []
 ```
 
-**NOTE:** Please note that sensu user needs elevated permissions to run commands with sudo, which require root privileges. 
+**NOTE:** Many remediation commands require root privileges. You can provide the `sensu` user with elevated permissions using sudo. Configuring sudo outside the scope of this document. 
 As such, sensu user needs to be added to the sudoers file.
 
 ### Example Check Definition and Remediation Request Configuration
