@@ -49,14 +49,14 @@ SENSU_USER           | |
 description          | Username for the Sensu API.
 required             | true
 type                 | String
-example              | `SENSU_USER=remediation-handler`
+example              | `SENSU_API_USER=remediation-handler`
 
 SENSU_PASS           | |
 ---------------------|-------------------------------
 description          | Password for the Sensu API.
 required             | true
 type                 | String
-example              | `SENSU_PASS=setecastronomy`
+example              | `SENSU_API_PASS=setecastronomy`
 
 SENSU_API_CERT_FILE  | |
 ---------------------|-------------------------------
