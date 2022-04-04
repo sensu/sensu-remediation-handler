@@ -262,7 +262,7 @@ metadata:
 
 **JSON example**
 
-```json
+```json5
 {
   "type": "CheckConfig",
   "api_version": "core/v2",
