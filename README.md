@@ -280,7 +280,8 @@ metadata:
           \"request\": \"remediate-nginx\",
           \"severities\": [ 1,2,3 ],
           \"occurrences\": [ 9 ]
-        }]"
+        }
+      ]"
   }
 }
 ```
