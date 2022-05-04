@@ -1,134 +1,121 @@
+[![Sensu Bonsai Asset](https://img.shields.io/badge/Bonsai-Download%20Me-brightgreen.svg?colorB=89C967&logo=sensu)](https://bonsai.sensu.io/assets/sensu/sensu-remediation-handler)
+![Go Test](https://github.com/sensu/sensu-remediation-handler/workflows/Go%20Test/badge.svg)
+![goreleaser](https://github.com/sensu/sensu-remediation-handler/workflows/goreleaser/badge.svg)
+
 # Sensu Remediation Handler
 
-[![Bonsai Asset Badge](https://img.shields.io/badge/Bonsai-Download%20Me-brightgreen.svg?colorB=89C967&logo=sensu)](https://bonsai.sensu.io/assets/sensu/sensu-remediation-handler) [![Build Status](https://travis-ci.org/sensu/sensu-remediation-handler.svg?branch=master)](https://travis-ci.org/sensu/sensu-remediation-handler)
-
+## Table of Contents
 - [Overview](#overview)
+- [Usage Examples](#usage-examples)
+  - [Setup](#setup)
 - [Configuration](#configuration)
-  - [Environment Variables](#environment-variables)
+  - [Asset registration](#asset-registration)
+  - [Handler template](#handler-template)
   - [Annotations](#annotations)
-    - [Annotation Specification](#annotation-specification)
-    - [Remediation Action Specification](#remediation-action-specification)
-- [Setup](#setup)
-- [Examples](#examples)
-  - [Example "Unscheduled" Check (Remediation Action)](#example-unscheduled-check-remediation-action)
-  - [Example Check Definition and Remediation Request Configuration](#example-check-definition-and-remediation-request-configuration)
-- [Acknowledgements](#acknowledgements)
+  - [Remediation action specification](#remediation-action-specification)
+  - [Privilege escalation](#privilege-escalation)
+- [Additional notes](#additional-notes)
+- [Contributing](#contributing)
+  - [Installation from source](#installation-from-source)
 
 ## Overview
 
-The Sensu Remediation Handler is a [Sensu Go event handler][1]
-that enables you to build self-healing workflows in Sensu. 
+The Sensu Remediation Handler is a simple [Sensu event handler][handlers] for
+configuring self-healing workflows using Sensu Go.
 
-The Sensu Remediation Handler &ndash; and other similar self-healing
-workflows in Sensu &ndash; combine a few Sensu features:
+The Sensu Remediation Handler &ndash; and other similar "self healing"
+workflows in Sensu Go &ndash; make use of the following features of the
+Sensu platform:
 
-- An "unscheduled check" configuration (i.e. a Sensu check with the `"publish":
-  false` attribute set).
-- The Sensu agent's built-in entity subscriptions (e.g. `entity:web-server-01`),
-  which make it possible to target a single agent with a check execution
-  request.
-- The Sensu Checks API `POST /checks/:check/execute` endpoint, which allows
- this handler to issue ad hoc check requests.
+- **Unscheduled checks.** A [Sensu Check][checks] configuration with the
+  `"publish":false` attribute set is an effective means of configuring a job,
+  or "action", that can be scheduled on an ad hoc basis.
 
-## Configuration
+- **On-demand scheduler.** The [Sensu Checks API][checks-api] provides an
+  endpoint (`POST /checks/:check/execute`) for requesting ad hoc check
+  executions.
 
-### Environment Variables
+- **Agent entity subscriptions.** The Sensu Agent's built-in entity
+  subscription (e.g. `entity:web-server-01`) makes it possible to target a
+  single agent with a check execution request. So failures can trigger
+  remediation actions
 
-The Sensu Remediation Handler does not honor any command line flags. Instead, it requires environment variables, either in the handler definition or in the Sensu backend service environment.
+## Usage Examples
 
-SENSU_API_URL        | |
----------------------|-------------------------------
-description          | URL for Sensu backend, including scheme, hostname or IP address, and port.
-required             | false
-type                 | String
-default              | http://127.0.0.1:8080
-example              | `SENSU_API_URL=http://sensu.example.com:8080`
+```
+$ ./sensu-remediation-handler --help
+Sensu Go handler for triggering automated remediations (playbooks)
 
-SENSU_USER           | |
----------------------|-------------------------------
-description          | Username for the Sensu API.
-required             | true
-type                 | String
-example              | `SENSU_API_USER=remediation-handler`
+Usage:
+  sensu-remediation-handler [flags]
+  sensu-remediation-handler [command]
 
-SENSU_PASS           | |
----------------------|-------------------------------
-description          | Password for the Sensu API.
-required             | true
-type                 | String
-example              | `SENSU_API_PASS=setecastronomy`
+Available Commands:
+  help        Help about any command
+  version     Print the version number of this plugin
 
-SENSU_API_CERT_FILE  | |
----------------------|-------------------------------
-description          | Filesystem path to certificate authority (CA) certificate used to validate https Sensu API connections.
-required             | false
-type                 | String
-example              | `SENSU_API_CERT_FILE=/etc/sensu/cacert.pem`
+Flags:
+  -a, --annotation string              Remediation actions annotation (default "io.sensu.remediation.config.actions")
+  -h, --help                           help for sensu-remediation-handler
+      --sensu-api-key string           Sensu API Key (defaults to $SENSU_API_KEY)
+      --sensu-api-url string           Sensu API URL (defaults to $SENSU_API_URL)
+      --sensu-trusted-ca-file string   Sensu API Trusted Certificate Authority File (defaults to $SENSU_TRUSTED_CA_FILE)
 
-### Annotations
+Use "sensu-remediation-handler [command] --help" for more information about a command.
+```
 
-Although environment variables provide connection details for the Sensu API, you'll use the `io.sensu.remediation.config.actions` check annotation to provide the configuration that defines remediation activities.
+### Setup
 
-#### Annotation Specification
+1. Register the remediation handler asset:
 
-The Sensu Remediation Handler uses the string value of the `io.sensu.remediation.config.actions` check annotation to determine which remediation actions, if any, should be scheduled for a given event.
-
-When present, the value of the `io.sensu.remediation.config.actions` check annotation must be a array of objects containing key/value pairs. Each object element in the array must conform to the remediation action specification.
-
-#### Remediation Action Specification
-
-description   | |
---------------|------------------------------------------------------------
-description   | A human-readable representation of the remediation action.
-required      | false
-type          | String
-example       | `"description": "restart failed ntpd service"`
-
-request       | |
---------------|-----------------------------------------------------------------
-description   | The name of the check to be scheduled by the remediation action.
-required      | true
-type          | String
-example       | `"request": "remediate-ntpd-service"`
-
-occurrences   | |
---------------|-------------------------------
-description   | A list of occurrence counts at which the remediation action is triggered.
-required      | true
-type          | Array of integers
-example       | `"occurrences": [4,14,42]`
-
-severities    | |
---------------|-------------------------------
-description   | A list of [check status severities][2] that are allowed for the remediation action.
-required      | true
-type          | Array of integers
-example       | `"severities": [1]`
-
-subscriptions | |
---------------|-------------------------------
-description   | A list of agent subscriptions for targeting remediation actions.
-required      | true
-type          | Array of strings
-example       | `"subscriptions": ["ntpd"]`
-
-## Setup
-
-1. Create a dedicated Sensu user and role for the remediation handler.
-
-   ```shell
-   sensuctl role create remediation-handler --namespace=default --verb=create,update --resource checks
-   sensuctl role-binding create remediation-handler --role=remediation-handler --user=remediation-handler
-   sensuctl user create remediation-handler --password REPLACEME
+   ```
+   $ sensuctl asset add sensu/sensu-remediation-handler
    ```
 
-2. Register the remediation handler asset.
+1. Create a dedicated Sensu role, role-binding, and user:
 
-   ```shell
-   sensuctl asset add sensu/sensu-remediation-handler --rename sensu-remediation-handler
+   ```
+   $ sensuctl role create remediation --namespace default --verb=create,update --resource checks
+   $ sensuctl role-binding create remediation --namespace default --role=remediation --group=remediation
+   $ sensuctl user create remediation --groups remediation --password REPLACEME
+   $ sensuctl api-key grant remediation
+   Created: /api/core/v2/apikeys/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
    ```
 
-3. Configure the remediation handler.
+   _NOTE: be sure to replace that password! 😅 And don't forget that roles &
+   role-bindings are scoped to individual namespaces. You can create cluster-wide
+   roles and role-bindings using the `sensuctl cluster-role create` and
+   `sensuctl cluster-role-binding create` commands (or the corresponding template
+   resources)._
+
+1. The UUID generated by the `sensuctl api-key grant` command is your Sensu
+   API Key. We recommend that you store this key in your secrets provider
+   (e.g. HashiCorp Vault, AWS Secrets Manager, Kubernetes Secrets, etc), and
+   create a [Sensu Secret][secrets] resource referencing the secret.
+
+   For example, if your secrets provider is exposing the API Key to your Sensu
+   backend(s) as the `$SENSU_REMEDIATION_API_KEY` environment variable, use
+   following Secret resource definition:
+
+   ```yaml
+   ---
+   type: Secret
+   api_version: secrets/v1
+   metadata:
+     name: remediation-api-key
+   spec:
+     provider: env
+     id: SENSU_REMEDIATION_API_KEY
+   ```
+
+   Save this definition to a file named `sensu-remediation-secret.yaml` and
+   run:
+
+   ```
+   $ sensuctl create -f sensu-remediation-secret.yaml
+   ```
+
+1. Configure the Remediation handler
 
    ```yaml
    ---
@@ -143,79 +130,270 @@ example       | `"subscriptions": ["ntpd"]`
      timeout: 10
      runtime_assets:
      - sensu-remediation-handler
-     env_vars:
-     - "SENSU_API_URL=http://127.0.0.1:8080"
-     - "SENSU_API_CERT_FILE="
-     - "SENSU_API_USER=remediation-handler"
-     - "SENSU_API_PASS=REPLACEME"
+     secrets:
+     - name: SENSU_API_KEY
+       secret: remediation-api-key
    ```
 
    Save this definition to a file named `sensu-remediation-handler.yaml` and
    run:
 
-   ```shell
-   sensuctl create -f sensu-remediation-handler.yaml
+   ```
+   $ sensuctl create -f sensu-remediation-handler.yaml
    ```
 
-## Examples
+## Configuration
 
-### Example "Unscheduled" Check (Remediation Action)
+### Asset registration
 
-```yaml
----
-type: CheckConfig
-api_version: core/v2
-metadata:
-  name: systemd-start-nginx
-  namespace: default
-spec:
-  command: sudo systemctl start nginx
-  publish: false
-  interval: 10 # interval is required but not used
-  subscriptions: []
+[Sensu Assets][10] are the best way to make use of this plugin. If you're not
+using an asset, please consider doing so! If you're using sensuctl 5.13 with
+Sensu Backend 5.13 or later, you can use the following command to add the asset:
+
+```
+$ sensuctl asset add sensu/sensu-remediation-handler:2.0.0
 ```
 
-### Example Check Definition and Remediation Request Configuration
+If you're using an earlier version of sensuctl, you can find the asset on the [Bonsai Asset Index][https://bonsai.sensu.io/assets/sensu/sensu-remediation-handler].
+
+### Handler Template
+
+```yml
+---
+type: Handler
+api_version: core/v2
+metadata:
+  name: sensu-remediation-handler
+spec:
+  type: pipe
+  command: sensu-remediation-handler
+  runtime_assets:
+  - sensu/sensu-remediation-handler:2.0.0
+  timout: 10
+  secrets:
+  - name: SENSU_API_KEY
+    secret: remediation-api-key
+---
+type: Secret
+api_version: secrets/v1
+metadata:
+  name: remediation-api-key
+spec:
+  provider: env
+  id: SENSU_REMEDIATION_API_KEY
+---
+type: Role
+api_version: core/v2
+metadata:
+  name: remediation
+spec:
+  rules:
+  - resources:
+    - checks
+    verbs:
+    - create
+    - update
+---
+type: RoleBinding
+api_version: core/v2
+metadata:
+  name: remediation
+spec:
+  role_ref:
+    name: remediation
+    type: Role
+  subjects:
+  - name: remediation
+    type: Group
+```
+
+### Annotations
+
+All arguments for this handler are tunable on a per entity or check basis
+based on annotations. The annotations keyspace for this handler is
+`sensu.io/plugins/remediation/config`.
+
+The available annotations for this handler are:
+
+- `sensu.io/plugins/remediation/config/actions`
+  Use to define one or more remediation actions.
+
+- `sensu.io/plugins/remediation/config/annotation`
+  Use to override the `--annotation` flag.
+
+- `sensu.io/plugins/remediation/config/sensu-api-url`
+  Use to override the `--sensu-api-url` flag and/or `$SENSU_API_URL` environment variable.
+
+- `sensu.io/plugins/remediation/config/sensu-api-key`
+  Use to override the `--sensu-api-key` flag and/or `$SENSU_API_KEY` environment variable.
+
+- `sensu.io/plugins/remediation/config/sensu-api-cert-file`
+  Use to override the `--sensu-api-cert-file` flag and/or `$SENSU_API_CERT_FILE` environment variable.
+
+### Remediation action specification
+
+The Sensu Remediation Handler uses the `io.sensu.remediation.config.actions`
+check annotation to determine which remediation actions, if any, should be
+scheduled for a given event.
+
+**YAML example**
 
 ```yaml
----
 type: CheckConfig
 api_version: core/v2
 metadata:
-  name: check-nginx
-  namespace: default
-  labels:
-    foo: bar
   annotations:
-    io.sensu.remediation.config.actions: |
+    sensu.io/plugins/remediation/config/actions: |
       [
         {
-          "description": "Perform this action once after Nginx has been down for 30 seconds.",
-          "request": "systemd-start-nginx",
-          "occurrences": [ 3 ],
-          "severities": [ 1,2 ]
+          "description": "Perform this action once after NGINX has been down for 30 seconds",
+          "request": "remediate-nginx",
+          "severities": [ 1,2,3 ],
+          "occurrences": [ 3 ]
         },
         {
-          "description": "Perform this action once after Nginx has been down for 120 seconds.",
-          "request": "systemd-restart-nginx",
-          "occurrences": [ 12 ],
-          "severities": [ 1,2 ]
+          "description": "Perform this action once after NGINX has been down for 90 seconds",
+          "request": "restart-nginx",
+          "severities": [ 1,2,3 ],
+          "occurrences": [ 9 ]
         }
       ]
-spec:
-  command: check_http -H 127.0.0.1 -P 80 -N
-  publish: true
-  interval: 10
-  handlers:
-  - remediation
-  subscriptions:
-  - nginx
 ```
 
-## Acknowledgements
+**JSON example**
 
-This handler implements a pattern first implemented in [Nick Stielau's Sensu Remediator][3] circa 2012. Thanks, Nick!
+```json
+{
+  "type": "CheckConfig",
+  "api_version": "core/v2",
+  "metadata": {
+    "annotations": {
+      "sensu.io/plugins/remediation/config/actions": "[
+        {
+          \"description\": \"Perform this action once after NGINX has been down for 30 seconds\",
+          \"request\": \"remediate-nginx\",
+          \"severities\": [ 1,2,3 ],
+          \"occurrences\": [ 3 ]
+        },
+        {
+          \"description\": \"Perform this action once after NGINX has been down for 90 seconds\",
+          \"request\": \"remediate-nginx\",
+          \"severities\": [ 1,2,3 ],
+          \"occurrences\": [ 9 ]
+        }]"
+  }
+}
+```
 
-[1]: https://docs.sensu.io/sensu-go/latest/reference/handlers/
-[2]: https://docs.sensu.io/sensu-go/latest/reference/checks/#check-result-specification
-[3]: https://github.com/sensu-plugins/sensu-plugins-sensu/blob/master/bin/handler-sensu.rb
+**Attributes**
+
+- **`description`**
+  A human-readable representation of the remediation action.
+
+- **`request`**
+  The name of the Sensu check to be scheduled by the remediation action.
+
+- **`severities`**
+  A list of [check status severities][status] that are allowed for the
+  remediation action.
+
+- **`occurrences`**
+  A list of occurrence counts at which the remediation action is triggered
+  (i.e. how many times the check needs to report in the current severity
+  before the remediation action is triggered).
+
+  **EXAMPLE**: a check with a 10 second interval and a remediation action
+  configured to trigger after 3 occurrences at severity 1 (warning) or 2
+  (critical) will be fired after 30 seconds (3 occurrences x 10 second
+  interval).
+
+> _**NOTE**: Like Kubernetes, labels and annotations in Sensu Go are always
+  "string" data types (i.e. arrays/lists/hashes/objects are not supported).
+  As a result, plugins like this remediation handler which want to store
+  complex data structures in an annotation need special treatment. In the YAML
+  example above a [YAML literal block scalar][11] ("|") is used to capture a
+  multi-line string; in the JSON example above the annotation value is escaped
+  JSON (i.e. string representation of a JSON object)._
+
+### Privilege escalation
+
+For the most part, privilege escalation is being left as an exercise for the
+reader (or a generous contributor to submit a PR 🙏😅). In the interim, the
+following hints may prove helpful:
+
+- Sensu services (`sensu-agent` and `sensu-backend`) do not run as root by
+  default.
+
+- In general, running the `sensu-agent` as root or adding the `sensu` user to
+  the sudoers group is considered an anti-pattern. We're not saying you can't
+  do it (a surprising number of Sensu users _DO_, for better or for worse), we
+  simply do not recommend it.
+
+- Executing commands with `sudo` requires additional configuration, and
+  **thoughtful consideration**. One possible approach is to grant the `sensu`
+  user permissions to execute _specific commands_ by editing `/etc/sudoers`
+  with `visudo`:
+
+  ```
+  $ sudo visudo
+  ```
+
+  Add the following contents (using an NGINX systemd service as an example):
+
+  ```
+  ### Allow sensu group to control nginx service without requiring a password
+  %sensu ALL=NOPASSWD:/usr/bin/systemctl stop  nginx.service
+  %sensu ALL=NOPASSWD:/usr/bin/systemctl stop  nginx
+  %sensu ALL=NOPASSWD:/usr/bin/systemctl start nginx.service
+  %sensu ALL=NOPASSWD:/usr/bin/systemctl start nginx
+  %sensu ALL=NOPASSWD:/usr/bin/systemctl restart nginx.service
+  %sensu ALL=NOPASSWD:/usr/bin/systemctl restart nginx
+  ```
+
+- The Sensu Agent offers an advanced feature called the "command allow list"
+  that may be helpful in the context of escalating prilileges while guarding
+  against unauthorized use.
+
+  Please see the [Sensu Agent "allow-list"][allow-list] reference documentation
+  for more information.
+
+## Additional Notes
+
+This handler was heavily inspired by [Nick Stielau's "Sensu Remediator"][12]
+(circa 2012).
+
+## Contributing
+
+For more information about contributing to this plugin, see [Contributing][1].
+
+### Installation from source
+
+The preferred way of installing and deploying this plugin is to use it as an
+Asset. If you would like to compile and install the plugin from source or
+contribute to it, download the latest version or create an executable script
+from this source.
+
+From the local path of the sensu-remediation-handler repository:
+
+```
+$ go build
+```
+
+[1]: https://github.com/sensu/sensu-go/blob/master/CONTRIBUTING.md
+[2]: https://github.com/sensu/sensu-plugin-sdk
+[3]: https://github.com/sensu-plugins/community/blob/master/PLUGIN_STYLEGUIDE.md
+[4]: https://github.com/sensu/handler-plugin-template/blob/master/.github/workflows/release.yml
+[5]: https://github.com/sensu/handler-plugin-template/actions
+[6]: https://docs.sensu.io/sensu-go/latest/reference/handlers/
+[7]: https://github.com/sensu/handler-plugin-template/blob/master/main.go
+[8]: https://bonsai.sensu.io/
+[9]: https://github.com/sensu/sensu-plugin-tool
+[10]: https://docs.sensu.io/sensu-go/latest/reference/assets/
+[11]: https://yaml.org/spec/1.2/spec.html#id2760844
+[12]: https://github.com/sensu-plugins/sensu-plugins-sensu/blob/master/bin/handler-sensu.rb
+[handlers]: https://docs.sensu.io/sensu-go/latest/reference/handlers/
+[checks]: https://docs.sensu.io/sensu-go/latest/reference/checks/
+[checks-api]: https://docs.sensu.io/sensu-go/latest/api/checks/
+[allow-list]: https://docs.sensu.io/sensu-go/latest/reference/agent/#general-configuration-flags
+[status]: https://docs.sensu.io/sensu-go/latest/reference/checks/#check-result-specification
+[secrets]: https://docs.sensu.io/sensu-go/latest/reference/secrets/

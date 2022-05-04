@@ -5,48 +5,122 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 
+	"github.com/sensu/sensu-plugin-sdk/sensu"
 	"github.com/sensu/sensu-go/types"
 )
 
-type Authentication struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	Expiration   int64  `json:"expires_at"`
+// Config represents the handler plugin config.
+type Config struct {
+	sensu.PluginConfig
+	Example            string
+	Annotation         string
+	SensuApiUrl        string
+	SensuApiKey        string
+	SensuTrustedCaFile string
 }
 
-type RemediationConfig struct {
+// Remediation action configuration
+type RemediationAction struct {
 	Request       string   `json:"request"`
 	Occurrences   []int    `json:"occurrences"`
 	Severities    []int    `json:"severities"`
 	Subscriptions []string `json:"subscriptions"`
 }
-type RequestPayload struct {
+
+// Remediation action request (i.e. "POST /check/:check/execute" request object)
+type RemediationRequest struct {
 	Check         string   `json:"check"`
 	Subscriptions []string `json:"subscriptions"`
 }
 
 var (
-	sensuApiUrl      string = getenv("SENSU_API_URL", "http://127.0.0.1:8080")
-	sensuApiCertFile string = getenv("SENSU_API_CERT_FILE", "")
-	sensuApiUser     string = getenv("SENSU_API_USER", "admin")
-	sensuApiPass     string = getenv("SENSU_API_PASS", "P@ssw0rd!")
-	sensuApiToken    string
+	config = Config{
+		PluginConfig: sensu.PluginConfig{
+			Name:     "sensu-remediation-handler",
+			Short:    "Sensu Go handler for triggering automated remediations (playbooks)",
+			Keyspace: "sensu.io/plugins/sensu-remediation-handler/config",
+		},
+	}
+
+	options = []*sensu.PluginConfigOption{
+		&sensu.PluginConfigOption{
+			Path:      "annotation",
+			Env:       "SENSU_REMEDIATION_ANNOTATION",
+			Argument:  "annotation",
+			Shorthand: "a",
+			Default:   "io.sensu.remediation.config.actions",
+			Usage:     "Remediation actions annotation",
+			Value:     &config.Annotation,
+		},
+		&sensu.PluginConfigOption{
+			Path:      "sensu-api-url",
+			Env:       "SENSU_API_URL",
+			Argument:  "sensu-api-url",
+			Shorthand: "",
+			Default:   "http://127.0.0.1:8080",
+			Usage:     "Sensu API URL (defaults to $SENSU_API_URL)",
+			Value:     &config.SensuApiUrl,
+		},
+		&sensu.PluginConfigOption{
+			Path:      "sensu-api-key",
+			Env:       "SENSU_API_KEY",
+			Argument:  "sensu-api-key",
+			Shorthand: "",
+			Default:   "",
+			Usage:     "Sensu API Key (defaults to $SENSU_API_KEY)",
+			Value:     &config.SensuApiKey,
+		},
+		&sensu.PluginConfigOption{
+			Path:      "sensu-trusted-ca-file",
+			Env:       "SENSU_TRUSTED_CA_FILE",
+			Argument:  "sensu-trusted-ca-file",
+			Shorthand: "",
+			Default:   "",
+			Usage:     "Sensu API Trusted Certificate Authority File (defaults to $SENSU_TRUSTED_CA_FILE)",
+			Value:     &config.SensuTrustedCaFile,
+		},
+	}
 )
 
-func getenv(key string, fallback string) string {
-	value := os.Getenv(key)
-	if len(value) == 0 {
-		return fallback
-	}
-	return value
+func main() {
+	handler := sensu.NewGoHandler(&config.PluginConfig, options, checkArgs, executeHandler)
+	handler.Execute()
 }
 
+func checkArgs(event *types.Event) error {
+	if len(config.SensuApiUrl) == 0 {
+		return errors.New("--sensu-api-url flag or $SENSU_API_URL environment variable must be set")
+	} else if len(config.SensuApiKey) == 0 {
+		return errors.New("--sensu-api-key flag or $SENSU_API_KEY environment variable must be set")
+	} else {
+		return nil
+	}
+}
+
+func executeHandler(event *types.Event) error {
+	actions,err := parseRemediationActions(event)
+	if err != nil {
+		log.Fatalf("ERROR: %s\n",err)
+		return err
+	}
+	action,proceed := matchRemediationAction(actions,event)
+	if proceed {
+		err = processRemediationAction(action,event)
+		if err != nil {
+			log.Fatalf("ERROR: %s\n",err)
+			return err
+		}
+	}
+	return nil
+}
+
+// helper function to look for items in a slice
 func contains(s []int, i int) bool {
 	for _, a := range s {
 		if a == i {
@@ -56,41 +130,12 @@ func contains(s []int, i int) bool {
 	return false
 }
 
-func authenticate(httpClient *http.Client) string {
-	var authentication Authentication
-	req, err := http.NewRequest(
-		"GET",
-		fmt.Sprintf("%s/auth", sensuApiUrl),
-		nil,
-	)
-	if err != nil {
-		log.Fatal("ERROR: ", err)
-	}
-	req.SetBasicAuth(sensuApiUser, sensuApiPass)
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		log.Fatalf("ERROR: %s", err)
-	} else if resp.StatusCode == 401 {
-		log.Fatalf("ERROR: %v %s (please check your access credentials)", resp.StatusCode, http.StatusText(resp.StatusCode))
-	} else if resp.StatusCode >= 300 {
-		log.Fatalf("ERROR: %v %s", resp.StatusCode, http.StatusText(resp.StatusCode))
-	}
-	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal("ERROR: ", err)
-	}
-	err = json.NewDecoder(bytes.NewReader(b)).Decode(&authentication)
-	if err != nil {
-		log.Fatal("ERROR: ", err)
-	}
-	return authentication.AccessToken
-}
-
-func LoadCACerts(path string) (*x509.CertPool, error) {
+// helper function to load custom CA certs
+func loadCaCerts(path string) (*x509.CertPool, error) {
 	rootCAs, err := x509.SystemCertPool()
 	if err != nil {
-		return nil, fmt.Errorf("Error loading system cert pool: %s", err)
+		log.Fatalf("ERROR: failed to load system cert pool: %s", err)
+		return nil, err
 	}
 	if rootCAs == nil {
 		rootCAs = x509.NewCertPool()
@@ -98,7 +143,8 @@ func LoadCACerts(path string) (*x509.CertPool, error) {
 	if path != "" {
 		certs, err := ioutil.ReadFile(path)
 		if err != nil {
-			return nil, fmt.Errorf("Error reading CA file (%s): %s", path, err)
+			log.Fatalf("ERROR: failed to read CA file (%s): %s", path, err)
+			return nil, err
 		} else {
 			rootCAs.AppendCertsFromPEM(certs)
 		}
@@ -106,8 +152,9 @@ func LoadCACerts(path string) (*x509.CertPool, error) {
 	return rootCAs, nil
 }
 
+// HTTP client initializer
 func initHttpClient() *http.Client {
-	certs, err := LoadCACerts(sensuApiCertFile)
+	certs, err := loadCaCerts(config.SensuTrustedCaFile)
 	if err != nil {
 		log.Fatalf("ERROR: %s\n", err)
 	}
@@ -123,86 +170,89 @@ func initHttpClient() *http.Client {
 	return client
 }
 
-func main() {
-	var stdin *os.File
-	var event types.Event
-	var actions []RemediationConfig
-	var annotationConfigKey string = "io.sensu.remediation.config.actions"
-	var httpClient *http.Client = initHttpClient()
+// Parse Remediation Actions Annotation
+func parseRemediationActions(event *types.Event) ([]RemediationAction, error) {
+	var actions []RemediationAction
+	// Parse remediation actions annotation
+	err := json.Unmarshal([]byte(event.Check.Annotations[config.Annotation]), &actions)
+	if err != nil {
+		log.Fatalf("ERROR: %s\n", err)
+		return actions, err
+	}
+	return actions, nil
+}
 
-	stdin = os.Stdin
-	err := json.NewDecoder(stdin).Decode(&event)
+// Evaluate remediation actions, determine if a remediation action is required
+func matchRemediationAction(actions []RemediationAction, event *types.Event) (*RemediationAction, bool) {
+	for _, action := range actions {
+		// Only perform the action if the event severity matches
+		if !contains(action.Severities, int(event.Check.Status)) {
+			// Mismatched severity... nothing to do
+			log.Printf("Remediation action \"%s\" configured to trigger on severities: %v (nothing to do for serverity %v).", action.Request, action.Severities, event.Check.Status)
+			return nil, false
+		} else if !contains(action.Occurrences, int(event.Check.Occurrences)) {
+			// Mismatched occurrences... nothing to do
+			log.Printf("Remediation action \"%s\" configured to trigger on occurrence(s): %v (nothing to do on occurrence #%v).", action.Request, action.Occurrences, event.Check.Occurrences)
+			return nil, false
+		} else {
+			// Matching severity & occurrences... let's process this job!
+			return &action,true
+		}
+	}
+	return nil,false
+}
+
+// Process remediation action
+func processRemediationAction(action *RemediationAction, event *types.Event) error {
+	var httpClient *http.Client = initHttpClient()
+	if len(action.Subscriptions) == 0 {
+		action.Subscriptions = append(action.Subscriptions, fmt.Sprintf("entity:%s", event.Entity.Name))
+	}
+	log.Printf("Requesting the \"%s\" remediation action on the \"%s\" subscription(s).", action.Request, action.Subscriptions)
+	data := RemediationRequest{
+		Check:         action.Request,
+		Subscriptions: action.Subscriptions,
+	}
+	postBody, err := json.Marshal(data)
+	if err != nil {
+		log.Fatalf("ERROR: %s\n", err)
+		return err
+	}
+	body := bytes.NewReader(postBody)
+	req, err := http.NewRequest(
+		"POST",
+		fmt.Sprintf("%s/api/core/v2/namespaces/%s/checks/%s/execute",
+			config.SensuApiUrl,
+			event.Entity.Namespace,
+			action.Request,
+		),
+		body,
+	)
 	if err != nil {
 		log.Fatal("ERROR: ", err)
+		return err
 	}
-
-	if event.Check.Annotations[annotationConfigKey] != "" {
-		err = json.Unmarshal([]byte(event.Check.Annotations[annotationConfigKey]), &actions)
-		if err != nil {
-			log.Fatal("ERROR: ", err)
-		}
-		for _, action := range actions {
-			// Only perform the action if the event severity matches
-			if !contains(action.Severities, int(event.Check.Status)) {
-				// Mismatched severity
-				log.Printf("Remediation action \"%s\" configured to trigger on severities: %v (nothing to do for serverity %v).", action.Request, action.Severities, event.Check.Status)
-			} else {
-				// Only perform the action if the event occurrence matches
-				if !contains(action.Occurrences, int(event.Check.Occurrences)) {
-					// Mismatched occurrences
-					log.Printf("Remediation action \"%s\" configured to trigger on occurrence(s): %v (nothing to do on occurrence #%v).", action.Request, action.Occurrences, event.Check.Occurrences)
-				} else {
-					// Perform the remediation action!
-					if len(action.Subscriptions) == 0 {
-						action.Subscriptions = append(action.Subscriptions, fmt.Sprintf("entity:%s", event.Entity.Name))
-					}
-					log.Printf("Requesting the \"%s\" remediation action on the \"%s\" subscription(s).", action.Request, action.Subscriptions)
-					data := RequestPayload{
-						Check:         action.Request,
-						Subscriptions: action.Subscriptions,
-					}
-					postBody, err := json.Marshal(data)
-					if err != nil {
-						log.Fatal("ERROR: ", err)
-					}
-					body := bytes.NewReader(postBody)
-					req, err := http.NewRequest(
-						"POST",
-						fmt.Sprintf("%s/api/core/v2/namespaces/%s/checks/%s/execute",
-							sensuApiUrl,
-							event.Entity.Namespace,
-							action.Request,
-						),
-						body,
-					)
-					if err != nil {
-						log.Fatal("ERROR: ", err)
-					}
-					sensuApiToken = authenticate(httpClient)
-					req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", sensuApiToken))
-					req.Header.Set("Content-Type", "application/json")
-					resp, err := httpClient.Do(req)
-					if err != nil {
-						log.Fatalf("ERROR: %s\n", err)
-					} else if resp.StatusCode == 404 {
-						log.Fatalf("ERROR: %v %s (%s); no check named \"%s\" found in namespace \"%s\".\n", resp.StatusCode, http.StatusText(resp.StatusCode), req.URL, action.Request, event.Entity.Namespace)
-					} else if resp.StatusCode >= 300 {
-						log.Fatalf("ERROR: %v %s", resp.StatusCode, http.StatusText(resp.StatusCode))
-					}
-					defer resp.Body.Close()
-					b, err := ioutil.ReadAll(resp.Body)
-					if err != nil {
-						log.Printf("Error reading response body")
-						log.Fatalf("ERROR: %s\n", err)
-					}
-					fmt.Println(resp.StatusCode)
-					fmt.Println(string(b))
-				}
-			}
-		}
-	} else {
-		// No configured actions
-		log.Printf("No remediation actions configured for check \"%s\"; nothing to do.", event.Check.Name)
-		log.Printf("To enable remediation actions, provide remediation configuration using the \"%s\" check annotation.", annotationConfigKey)
+	req.Header.Set("Authorization", fmt.Sprintf("Key %s", config.SensuApiKey))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		log.Fatalf("ERROR: %s\n", err)
+		return err
+	} else if resp.StatusCode == 404 {
+		log.Fatalf("ERROR: %v %s (%s); no check named \"%s\" found in namespace \"%s\".\n", resp.StatusCode, http.StatusText(resp.StatusCode), req.URL, action.Request, event.Entity.Namespace)
+		return err
+	} else if resp.StatusCode >= 300 {
+		log.Fatalf("ERROR: %v %s", resp.StatusCode, http.StatusText(resp.StatusCode))
+		return err
 	}
+	defer resp.Body.Close()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error reading response body")
+		log.Fatalf("ERROR: %s\n", err)
+		return err
+	}
+	fmt.Println(resp.StatusCode)
+	fmt.Println(string(b))
+	return nil
 }
